@@ -1,0 +1,101 @@
+{
+  "report_name": "corrupted",
+  "success": false,
+  "gx_success": false,
+  "checks": [
+    {
+      "expectation": "ExpectTableRowCountToBeBetween",
+      "success": true,
+      "result": {
+        "observed_value": 21
+      }
+    },
+    {
+      "expectation": "ExpectColumnValuesToNotBeNull",
+      "success": true,
+      "result": {
+        "element_count": 21,
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "partial_unexpected_list": [],
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": []
+      }
+    },
+    {
+      "expectation": "ExpectColumnValuesToBeUnique",
+      "success": false,
+      "result": {
+        "element_count": 21,
+        "unexpected_count": 4,
+        "unexpected_percent": 19.047619047619047,
+        "partial_unexpected_list": [
+          "10.1145/3637528.3671824",
+          "10.1145/3637528.3671823",
+          "10.1145/3637528.3671824",
+          "10.1145/3637528.3671823"
+        ],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 19.047619047619047,
+        "unexpected_percent_nonmissing": 19.047619047619047,
+        "partial_unexpected_counts": [
+          {
+            "value": "10.1145/3637528.3671823",
+            "count": 2
+          },
+          {
+            "value": "10.1145/3637528.3671824",
+            "count": 2
+          }
+        ],
+        "partial_unexpected_index_list": [
+          0,
+          1,
+          19,
+          20
+        ]
+      }
+    },
+    {
+      "expectation": "ExpectColumnValueLengthsToBeBetween",
+      "success": false,
+      "result": {
+        "element_count": 21,
+        "unexpected_count": 5,
+        "unexpected_percent": 23.809523809523807,
+        "partial_unexpected_list": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "unexpected_percent_total": 23.809523809523807,
+        "unexpected_percent_nonmissing": 23.809523809523807,
+        "partial_unexpected_counts": [
+          {
+            "value": "",
+            "count": 5
+          }
+        ],
+        "partial_unexpected_index_list": [
+          0,
+          1,
+          2,
+          19,
+          20
+        ]
+      }
+    }
+  ],
+  "freshness": {
+    "threshold_days": 180,
+    "stale_rows": 7,
+    "total_rows": 21,
+    "stale_ratio": 0.3333333333333333,
+    "success": false
+  }
+}

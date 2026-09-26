@@ -1,0 +1,73 @@
+{
+  "input_rows": 24,
+  "output_rows": 21,
+  "corruptions": [
+    {
+      "corruption_type": "drop_latest_records",
+      "affected_count": 5,
+      "paper_ids": [
+        "10.1145/3637528.3671812",
+        "10.1145/3637528.3671808",
+        "10.1145/3637528.3671804",
+        "10.1145/3637528.3671807",
+        "10.1145/3637528.3671802"
+      ],
+      "parameters": {
+        "fraction": 0.2
+      }
+    },
+    {
+      "corruption_type": "blank_summary",
+      "affected_count": 3,
+      "paper_ids": [
+        "10.1145/3637528.3671824",
+        "10.1145/3637528.3671823",
+        "10.1145/3637528.3671822"
+      ]
+    },
+    {
+      "corruption_type": "inject_noise",
+      "affected_count": 3,
+      "paper_ids": [
+        "10.1145/3637528.3671821",
+        "10.1145/3637528.3671810",
+        "10.1145/3637528.3671820"
+      ]
+    },
+    {
+      "corruption_type": "truncate_title",
+      "affected_count": 3,
+      "paper_ids": [
+        "10.1145/3637528.3671819",
+        "10.1145/3637528.3671818",
+        "10.1145/3637528.3671817"
+      ],
+      "parameters": {
+        "max_characters": 5
+      }
+    },
+    {
+      "corruption_type": "stale_date",
+      "affected_count": 6,
+      "paper_ids": [
+        "10.1145/3637528.3671816",
+        "10.1145/3637528.3671815",
+        "10.1145/3637528.3671814",
+        "10.1145/3637528.3671813",
+        "10.1145/3637528.3671801",
+        "10.1145/3637528.3671811"
+      ],
+      "parameters": {
+        "days_shifted": 730
+      }
+    },
+    {
+      "corruption_type": "duplicate_rows",
+      "affected_count": 2,
+      "paper_ids": [
+        "10.1145/3637528.3671824",
+        "10.1145/3637528.3671823"
+      ]
+    }
+  ]
+}

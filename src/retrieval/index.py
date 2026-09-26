@@ -37,8 +37,12 @@ class LocalEmbeddingIndex:
         self.embedding_model = MiniLMEmbeddings(settings.embedding_model)
         self.client = chromadb.PersistentClient(path=str(persist_path))
         self.collection = self.client.get_collection(name=collection_name)
-        self.documents_by_paper_id = {document["paper_id"].lower(): document for document in documents}
-        self.documents_by_title = {document["title"].lower(): document for document in documents}
+        self.documents_by_paper_id = {
+            document["paper_id"].lower(): document for document in documents
+        }
+        self.documents_by_title = {
+            document["title"].lower(): document for document in documents
+        }
 
     @staticmethod
     def _build_documents(df: pd.DataFrame) -> list[dict[str, Any]]:
@@ -66,14 +70,20 @@ class LocalEmbeddingIndex:
         return documents
 
     @staticmethod
-    def _derive_collection_name(settings: Settings, embeddings_output_path: Path | None) -> str:
+    def _derive_collection_name(
+        settings: Settings, embeddings_output_path: Path | None
+    ) -> str:
         if embeddings_output_path is None:
             return settings.baseline_collection_name
 
         name_map = {
             settings.paths.embeddings_json.resolve(): settings.baseline_collection_name,
-            settings.paths.corrupted_embeddings_json.resolve(): settings.corrupted_collection_name,
-            settings.paths.repaired_embeddings_json.resolve(): settings.repaired_collection_name,
+            settings.paths.corrupted_embeddings_json.resolve(): (
+                settings.corrupted_collection_name
+            ),
+            settings.paths.repaired_embeddings_json.resolve(): (
+                settings.repaired_collection_name
+            ),
         }
         resolved_path = embeddings_output_path.resolve()
         if resolved_path in name_map:
@@ -86,7 +96,7 @@ class LocalEmbeddingIndex:
         df: pd.DataFrame,
         settings: Settings,
         embeddings_output_path: Path | None = None,
-    ) -> "LocalEmbeddingIndex":
+    ) -> LocalEmbeddingIndex:
         collection_name = cls._derive_collection_name(settings, embeddings_output_path)
         documents = cls._build_documents(df)
         persist_path = settings.paths.chroma_dir
@@ -102,7 +112,9 @@ class LocalEmbeddingIndex:
             name=collection_name,
             configuration={"hnsw": {"space": "cosine"}},
         )
-        embeddings = embedding_model.embed_documents([document["content"] for document in documents])
+        embeddings = embedding_model.embed_documents(
+            [document["content"] for document in documents]
+        )
         collection.add(
             ids=[document["record_id"] for document in documents],
             embeddings=embeddings,
@@ -116,7 +128,9 @@ class LocalEmbeddingIndex:
             {
                 "backend": "chroma",
                 "embedding_model": settings.embedding_model,
-                "persist_path": str(persist_path),
+                "persist_path": persist_path.relative_to(
+                    settings.paths.project_dir
+                ).as_posix(),
                 "collection_name": collection_name,
                 "documents": documents,
             },
@@ -129,13 +143,18 @@ class LocalEmbeddingIndex:
         )
 
     @classmethod
-    def load(cls, settings: Settings, embeddings_path: Path | None = None) -> "LocalEmbeddingIndex":
+    def load(
+        cls, settings: Settings, embeddings_path: Path | None = None
+    ) -> LocalEmbeddingIndex:
         payload = read_json(embeddings_path or settings.paths.embeddings_json)
+        persist_path = Path(payload["persist_path"])
+        if not persist_path.is_absolute():
+            persist_path = settings.paths.project_dir / persist_path
         return cls(
             settings=settings,
             collection_name=payload["collection_name"],
             documents=payload["documents"],
-            persist_path=Path(payload["persist_path"]),
+            persist_path=persist_path,
         )
 
     def search(self, query: str, top_k: int | None = None) -> list[SearchResult]:
@@ -151,7 +170,9 @@ class LocalEmbeddingIndex:
         distances = results.get("distances", [[]])[0]
 
         scored: list[SearchResult] = []
-        for record_id, content, metadata, distance in zip(ids, documents, metadatas, distances, strict=False):
+        for record_id, content, metadata, distance in zip(
+            ids, documents, metadatas, distances, strict=False
+        ):
             if not record_id or not metadata or not content:
                 continue
             scored.append(
