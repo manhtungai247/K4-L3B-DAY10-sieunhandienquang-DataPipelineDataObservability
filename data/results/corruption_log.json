@@ -1,0 +1,124 @@
+[
+  {
+    "corruption_type": "drop_latest_records",
+    "count": 4,
+    "description": "Dropped 4 newest records to simulate missing ingestion events.",
+    "affected_papers": [
+      {
+        "paper_id": "10.1145/3637528.3671812",
+        "title": "Continuous Benchmark Evaluation for Enterprise Retrieval Pipelines"
+      },
+      {
+        "paper_id": "10.1145/3637528.3671808",
+        "title": "Multi-Agent Consensus for High-Stakes Fact Verification"
+      },
+      {
+        "paper_id": "10.1145/3637528.3671804",
+        "title": "Freshness SLAs for Real-Time LLM Knowledge Augmentation"
+      },
+      {
+        "paper_id": "10.1145/3637528.3671807",
+        "title": "Synthetic Corruption Testing: Stress-Testing Vector Search Robustness"
+      }
+    ]
+  },
+  {
+    "corruption_type": "blank_summary",
+    "count": 2,
+    "description": "Erased abstract/summary to empty string (violates summary length expectation).",
+    "affected_papers": [
+      {
+        "index": 0,
+        "paper_id": "10.1145/3637528.3671802"
+      },
+      {
+        "index": 1,
+        "paper_id": "10.1145/3637528.3671824"
+      }
+    ]
+  },
+  {
+    "corruption_type": "inject_noise",
+    "count": 2,
+    "description": "Injected gibberish noise prefix to degrade embedding semantic matching.",
+    "affected_papers": [
+      {
+        "index": 2,
+        "paper_id": "10.1145/3637528.3671823"
+      },
+      {
+        "index": 3,
+        "paper_id": "10.1145/3637528.3671822"
+      }
+    ]
+  },
+  {
+    "corruption_type": "truncate_title",
+    "count": 2,
+    "description": "Truncated paper title to 'Bad' (< 8 chars) breaking title lookup and metadata.",
+    "affected_papers": [
+      {
+        "index": 4,
+        "paper_id": "10.1145/3637528.3671821"
+      },
+      {
+        "index": 5,
+        "paper_id": "10.1145/3637528.3671810"
+      }
+    ]
+  },
+  {
+    "corruption_type": "stale_date",
+    "count": 8,
+    "description": "Rewound publication date to 2020 on 8 papers (> 25% Freshness SLA threshold).",
+    "affected_papers": [
+      {
+        "index": 0,
+        "paper_id": "10.1145/3637528.3671802"
+      },
+      {
+        "index": 1,
+        "paper_id": "10.1145/3637528.3671824"
+      },
+      {
+        "index": 2,
+        "paper_id": "10.1145/3637528.3671823"
+      },
+      {
+        "index": 3,
+        "paper_id": "10.1145/3637528.3671822"
+      },
+      {
+        "index": 4,
+        "paper_id": "10.1145/3637528.3671821"
+      },
+      {
+        "index": 5,
+        "paper_id": "10.1145/3637528.3671810"
+      },
+      {
+        "index": 6,
+        "paper_id": "10.1145/3637528.3671820"
+      },
+      {
+        "index": 7,
+        "paper_id": "10.1145/3637528.3671819"
+      }
+    ]
+  },
+  {
+    "corruption_type": "duplicate_rows",
+    "count": 2,
+    "description": "Duplicated rows with identical paper_id (violates unique paper_id expectation).",
+    "affected_papers": [
+      {
+        "paper_id": "10.1145/3637528.3671802",
+        "title": "Data Observability and Quality Gates for Production RAG Systems"
+      },
+      {
+        "paper_id": "10.1145/3637528.3671824",
+        "title": "Advanced Perspectives on Continuous Benchmark Evaluation for Enterprise Retrieval Pipelines"
+      }
+    ]
+  }
+]

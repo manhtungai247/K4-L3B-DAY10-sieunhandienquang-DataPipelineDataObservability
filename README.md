@@ -30,3 +30,24 @@
 2. Tích hợp **Freshness Check** (`age_days`) vào Quality Gate
 3. Chạy **Baseline → Corruption → Repair** → xuất bảng đối chiếu 3 trạng thái
 4. **Live Demo** trên bảng & nộp link repo lên VLearn LMS
+
+## Chạy bài
+
+```bash
+uv sync --extra dev
+uv run python script/run_phase1.py
+uv run python script/run_corruption_flow.py
+```
+
+Trên Windows, nếu repo nằm trong đường dẫn dài và Great Expectations báo thiếu module,
+đặt virtual environment ở đường dẫn ngắn để tránh giới hạn `MAX_PATH`:
+
+```powershell
+$env:UV_PROJECT_ENVIRONMENT="$env:USERPROFILE\venvs\day10"
+uv sync --extra dev
+uv run python script\run_phase1.py
+uv run python script\run_corruption_flow.py
+```
+
+Các pipeline dùng snapshot Crossref trong `data/raw/` khi không bật `REFRESH_SOURCE`,
+nhờ đó có thể tái lập kết quả mà không phụ thuộc trạng thái API bên ngoài.
