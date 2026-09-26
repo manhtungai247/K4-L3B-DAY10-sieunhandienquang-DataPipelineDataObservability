@@ -10,7 +10,7 @@
 
 | STT | Họ và tên | MSSV | GitHub | Vai trò & Phân công công việc | Báo cáo cá nhân |
 |---:|---|---|---|---|---|
-| 1 | Nguyễn Hồng Thái | 2A202602894 | `thaijaor` | Trưởng nhóm / Pipeline Integrator (`phase1.py`, `corruption_flow.py`) | `report/individual_report.md` |
+| 1 | Nguyễn Hồng Thái | 2A202602894 | `thaijaor` | Trưởng nhóm / Pipeline Integrator (`phase1.py`, `corruption_flow.py`) | `report/NguyenHongThai_2A202602894.md` |
 | 2 | Trần Mạnh Tùng | 2A202602879 | `manhtungai247` | Data Foundation & Recovery (`crossref.py`, `cleaning.py`, raw data) | Báo cáo cá nhân trên LMS |
 | 3 | Nguyễn Mạnh Cường | 2A202602650 | `cuong-cpu21` | Observability, Evaluation & RAG (`quality.py`, `testset.py`, ChromaDB) | Báo cáo cá nhân trên LMS |
 
