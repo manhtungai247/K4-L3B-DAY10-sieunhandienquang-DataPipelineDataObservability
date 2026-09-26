@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Observability & Self-Healing RAG Dashboard — Day 10</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070a13;
+      --bg-card: rgba(15, 23, 42, 0.75);
+      --bg-card-hover: rgba(30, 41, 59, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(0, 242, 254, 0.3);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      --cyan-neon: #00f2fe;
+      --cyan-glow: rgba(0, 242, 254, 0.4);
+      --blue-accent: #3b82f6;
+      --coral-danger: #ff3366;
+      --coral-glow: rgba(255, 51, 102, 0.4);
+      --emerald-success: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.4);
+      --amber-warning: #f59e0b;
+      --purple-accent: #a855f7;
+
+      --font-heading: 'Outfit', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(0, 242, 254, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 75%, rgba(168, 85, 247, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.6) 0%, transparent 100%);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      line-height: 1.5;
+      overflow-x: hidden;
+      padding-bottom: 60px;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header Nav */
+    header {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(7, 10, 19, 0.85);
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 20px var(--cyan-glow);
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-text p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* State Switcher Tabs */
+    .state-switcher {
+      display: flex;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 5px;
+      gap: 6px;
+    }
+
+    .state-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .state-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .state-btn.active.state-baseline {
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(59, 130, 246, 0.2));
+      color: var(--cyan-neon);
+      border: 1px solid var(--cyan-neon);
+      box-shadow: 0 0 15px var(--cyan-glow);
+    }
+
+    .state-btn.active.state-corrupted {
+      background: linear-gradient(135deg, rgba(255, 51, 102, 0.15), rgba(239, 68, 68, 0.2));
+      color: var(--coral-danger);
+      border: 1px solid var(--coral-danger);
+      box-shadow: 0 0 15px var(--coral-glow);
+    }
+
+    .state-btn.active.state-repaired {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.2));
+      color: var(--emerald-success);
+      border: 1px solid var(--emerald-success);
+      box-shadow: 0 0 15px var(--emerald-glow);
+    }
+
+    .btn-repair-trigger {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 20px var(--emerald-glow);
+      transition: all 0.3s ease;
+    }
+
+    .btn-repair-trigger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 30px var(--emerald-glow);
+    }
+
+    /* Main Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 24px;
+      margin-top: 32px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 24px;
+      backdrop-filter: blur(16px);
+      position: relative;
+      overflow: hidden;
+      transition: border 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .card-title {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    /* Top KPI Cards */
+    .kpi-row {
+      grid-column: span 12;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-3px);
+    }
+
+    .kpi-label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .kpi-value-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 12px 0 6px;
+    }
+
+    .kpi-value {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+    }
+
+    .kpi-delta {
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .kpi-delta.good { color: var(--emerald-success); }
+    .kpi-delta.bad { color: var(--coral-danger); }
+    .kpi-delta.neutral { color: var(--text-muted); }
+
+    .kpi-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    /* Pipeline Architecture Interactive Bar */
+    .pipeline-bar {
+      grid-column: span 12;
+    }
+
+    .pipeline-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      position: relative;
+    }
+
+    .pipe-step {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .pipe-step:hover {
+      border-color: var(--cyan-neon);
+      transform: translateY(-3px);
+    }
+
+    .pipe-step.pass {
+      border-left: 4px solid var(--emerald-success);
+    }
+
+    .pipe-step.fail {
+      border-left: 4px solid var(--coral-danger);
+      background: rgba(255, 51, 102, 0.05);
+    }
+
+    .pipe-num {
+      font-family: var(--font-code);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .pipe-name {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #fff;
+    }
+
+    .pipe-status {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+
+    .badge-pass {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--emerald-success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-fail {
+      background: rgba(255, 51, 102, 0.15);
+      color: var(--coral-danger);
+      border: 1px solid rgba(255, 51, 102, 0.3);
+    }
+
+    /* Side by side Theater: GX vs RAG */
+    .gx-panel {
+      grid-column: span 5;
+    }
+
+    .rag-panel {
+      grid-column: span 7;
+    }
+
+    @media (max-width: 1024px) {
+      .gx-panel, .rag-panel {
+        grid-column: span 12;
+      }
+    }
+
+    /* GX Rules List */
+    .gx-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .gx-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+
+    .gx-item:hover {
+      background: rgba(30, 41, 59, 0.7);
+    }
+
+    .gx-item-info h4 {
+      font-family: var(--font-code);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 2px;
+    }
+
+    .gx-item-info p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .gx-badge {
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-code);
+    }
+
+    /* Freshness Gauge */
+    .freshness-meter {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+    }
+
+    .fresh-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 0.85rem;
+    }
+
+    .progress-bar-bg {
+      height: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.6s ease;
+    }
+
+    .sla-marker {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 25%;
+      width: 2px;
+      background: var(--amber-warning);
+      z-index: 2;
+    }
+
+    /* RAG Comparison Question Selector */
+    .qa-selector {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+
+    .qa-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .qa-chip:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .qa-chip.active {
+      background: var(--cyan-neon);
+      color: #070a13;
+      border-color: var(--cyan-neon);
+      font-weight: 700;
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    /* Question & Answer Box */
+    .qa-display {
+      background: rgba(11, 16, 28, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .qa-question {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .answers-comparison {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .answers-comparison {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .answer-card {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .answer-card.state-active-box {
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    }
+
+    .ans-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .ans-body {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+      min-height: 48px;
+    }
+
+    .ans-meta {
+      font-family: var(--font-code);
+      font-size: 0.72rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      width: fit-content;
+    }
+
+    /* Corruption Suite Breakdown */
+    .corruption-section {
+      grid-column: span 12;
+    }
+
+    .corruptions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .corr-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .corr-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .corr-tag {
+      font-family: var(--font-code);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--coral-danger);
+      background: rgba(255, 51, 102, 0.1);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .corr-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .corr-affected {
+      font-family: var(--font-code);
+      font-size: 0.72rem;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 8px;
+      border-radius: 6px;
+      color: #94a3b8;
+    }
+
+    /* Modal for Self Healing */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .heal-modal {
+      background: #0f172a;
+      border: 1px solid var(--emerald-success);
+      box-shadow: 0 0 50px var(--emerald-glow);
+      border-radius: 20px;
+      max-width: 580px;
+      width: 90%;
+      padding: 32px;
+      text-align: center;
+      position: relative;
+    }
+
+    .heal-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); filter: drop-shadow(0 0 20px var(--emerald-success)); }
+      100% { transform: scale(1); }
+    }
+
+    .heal-title {
+      font-family: var(--font-heading);
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .heal-steps {
+      text-align: left;
+      margin: 20px 0;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      padding: 16px;
+      font-family: var(--font-code);
+      font-size: 0.82rem;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .heal-step-line {
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .heal-step-line.done {
+      color: var(--emerald-success);
+    }
+
+    .btn-close-modal {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .btn-close-modal:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="container header-content">
+      <div class="brand">
+        <div class="brand-logo">🛡️</div>
+        <div class="brand-text">
+          <h1>Data Observability & Self-Healing Pipeline</h1>
+          <p>K4-L3B Day 10 • Team <strong>sieunhandienquang</strong> • Great Expectations 1.x & RAG</p>
+        </div>
+      </div>
+
+      <!-- State Switcher -->
+      <div class="state-switcher">
+        <button class="state-btn active state-baseline" onclick="setState('baseline')">
+          <span>🟢</span> Baseline (Sạch)
+        </button>
+        <button class="state-btn state-corrupted" onclick="setState('corrupted')">
+          <span>🔴</span> Corrupted (Nhiễm lỗi)
+        </button>
+        <button class="state-btn state-repaired" onclick="setState('repaired')">
+          <span>✨</span> Repaired (Phục hồi)
+        </button>
+      </div>
+
+      <button class="btn-repair-trigger" onclick="openHealModal()">
+        <span>⚡</span> Tự Phục Hồi (Self-Healing)
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="dashboard-grid">
+
+      <!-- Top KPI Row -->
+      <div class="kpi-row">
+        <!-- KPI 1: Retrieval Hit Rate -->
+        <div class="kpi-card" id="kpi-hit-rate">
+          <div class="kpi-label">Retrieval Hit Rate (Top-4)</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="val-hit-rate">100.0%</span>
+            <span class="kpi-delta good" id="delta-hit-rate">Max Recall</span>
+          </div>
+          <div class="kpi-sub" id="sub-hit-rate">10/10 truy xuất chính xác DOI đích</div>
+        </div>
+
+        <!-- KPI 2: Mean Token F1 -->
+        <div class="kpi-card" id="kpi-f1">
+          <div class="kpi-label">Mean Token F1 Score</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="val-f1">1.0000</span>
+            <span class="kpi-delta good" id="delta-f1">Hoàn hảo</span>
+          </div>
+          <div class="kpi-sub" id="sub-f1">Trùng khớp từ khóa tuyệt đối</div>
+        </div>
+
+        <!-- KPI 3: LLM Judge Accuracy -->
+        <div class="kpi-card" id="kpi-judge">
+          <div class="kpi-label">LLM Judge Accuracy</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="val-judge">100.0%</span>
+            <span class="kpi-delta good" id="delta-judge">Score: 5.0/5.0</span>
+          </div>
+          <div class="kpi-sub" id="sub-judge">10/10 câu trả lời đúng bản chất</div>
+        </div>
+
+        <!-- KPI 4: Quality Gate GX 1.x -->
+        <div class="kpi-card" id="kpi-quality">
+          <div class="kpi-label">Data Observability Gate</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="val-quality" style="color: var(--emerald-success)">PASS</span>
+            <span class="kpi-delta good" id="delta-quality">4/4 Passed</span>
+          </div>
+          <div class="kpi-sub" id="sub-quality">Zero Schema & Completeness Drifts</div>
+        </div>
+
+        <!-- KPI 5: Freshness SLA -->
+        <div class="kpi-card" id="kpi-freshness">
+          <div class="kpi-label">Freshness SLA (180 Ngày)</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="val-freshness" style="color: var(--emerald-success)">4.17%</span>
+            <span class="kpi-delta good" id="delta-freshness">SLA: &le; 25%</span>
+          </div>
+          <div class="kpi-sub" id="sub-freshness">1 bài quá hạn / 24 tổng số bài</div>
+        </div>
+      </div>
+
+      <!-- Pipeline Architecture Interactive Stream -->
+      <div class="card pipeline-bar">
+        <div class="card-title">
+          <span>🔄</span> Kiến Trúc Pipeline End-to-End & Chốt Kiểm Soát
+        </div>
+        <div class="pipeline-steps">
+          <div class="pipe-step pass" id="step-ingest">
+            <span class="pipe-num">01 / INGESTION</span>
+            <span class="pipe-name">Crossref API</span>
+            <span class="pipe-status badge-pass">24 Raw Docs</span>
+          </div>
+          <div class="pipe-step pass" id="step-clean">
+            <span class="pipe-num">02 / CLEANING</span>
+            <span class="pipe-name">Data Modeling</span>
+            <span class="pipe-status badge-pass">Clean 5-Parts</span>
+          </div>
+          <div class="pipe-step pass" id="step-gate">
+            <span class="pipe-num">03 / GATE</span>
+            <span class="pipe-name">GX 1.x & SLA</span>
+            <span class="pipe-status badge-pass" id="pipe-gate-badge">PASS</span>
+          </div>
+          <div class="pipe-step pass" id="step-index">
+            <span class="pipe-num">04 / VECTOR DB</span>
+            <span class="pipe-name">ChromaDB Index</span>
+            <span class="pipe-status badge-pass" id="pipe-index-badge">papers-baseline</span>
+          </div>
+          <div class="pipe-step pass" id="step-eval">
+            <span class="pipe-num">05 / EVALUATION</span>
+            <span class="pipe-name">Benchmark 10Q</span>
+            <span class="pipe-status badge-pass" id="pipe-eval-badge">Hit Rate 1.0</span>
+          </div>
+          <div class="pipe-step pass" id="step-repair">
+            <span class="pipe-num">06 / RECOVERY</span>
+            <span class="pipe-name">Self-Healing</span>
+            <span class="pipe-status badge-pass">Idempotent</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Left Column: Great Expectations 1.x Suite -->
+      <div class="card gx-panel">
+        <div class="card-title">
+          <span>🔍</span> Chốt Kiểm Định Great Expectations 1.x
+        </div>
+        <div class="gx-list" id="gx-expectations-list">
+          <!-- Expectation 1 -->
+          <div class="gx-item" id="exp-row-count">
+            <div class="gx-item-info">
+              <h4>ExpectTableRowCountToBeBetween</h4>
+              <p>Ngưỡng hợp lệ: [18, 29] bản ghi • Thực tế: <strong id="val-row-count">24 dòng</strong></p>
+            </div>
+            <span class="gx-badge badge-pass" id="badge-row-count">PASS</span>
+          </div>
+          <!-- Expectation 2 -->
+          <div class="gx-item" id="exp-not-null">
+            <div class="gx-item-info">
+              <h4>ExpectColumnValuesToNotBeNull</h4>
+              <p>Cột khóa chính <code>paper_id</code> không được rỗng • Lỗi: <strong id="val-not-null">0 null</strong></p>
+            </div>
+            <span class="gx-badge badge-pass" id="badge-not-null">PASS</span>
+          </div>
+          <!-- Expectation 3 -->
+          <div class="gx-item" id="exp-unique">
+            <div class="gx-item-info">
+              <h4>ExpectColumnValuesToBeUnique</h4>
+              <p>Khóa <code>paper_id</code> là duy nhất • Lỗi trùng: <strong id="val-unique">0 trùng</strong></p>
+            </div>
+            <span class="gx-badge badge-pass" id="badge-unique">PASS</span>
+          </div>
+          <!-- Expectation 4 -->
+          <div class="gx-item" id="exp-length">
+            <div class="gx-item-info">
+              <h4>ExpectColumnValueLengthsToBeBetween</h4>
+              <p>Độ dài <code>summary</code> tối thiểu &ge; 20 ký tự • Lỗi rỗng: <strong id="val-length">0 rỗng</strong></p>
+            </div>
+            <span class="gx-badge badge-pass" id="badge-length">PASS</span>
+          </div>
+        </div>
+
+        <!-- Freshness Meter -->
+        <div class="freshness-meter">
+          <div class="fresh-header">
+            <span><strong>Độ Tươi Mới (Freshness SLA: &le; 25% Stale)</strong></span>
+            <span id="fresh-percent-txt" style="color: var(--emerald-success); font-weight:700">4.17% Stale</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="sla-marker" title="Ngưỡng SLA cho phép 25%"></div>
+            <div class="progress-bar-fill" id="fresh-fill" style="width: 4.17%; background: var(--emerald-success)"></div>
+          </div>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;" id="fresh-explanation">
+            Chỉ 1/24 bài báo cũ quá 180 ngày. Nằm an toàn dưới trần vi phạm SLA 25%.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Column: RAG Theater & Silent Failure Explorer -->
+      <div class="card rag-panel">
+        <div class="card-title">
+          <span>🎭</span> RAG Benchmark Theater — Đối Chiếu Trả Lời & Silent Failure
+        </div>
+        
+        <!-- Question Chips -->
+        <div class="qa-selector" id="qa-chips-container">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- QA Display Box -->
+        <div class="qa-display">
+          <div class="qa-question" id="display-question">
+            Loading question...
+          </div>
+
+          <div class="answers-comparison">
+            <!-- Baseline Answer -->
+            <div class="answer-card" id="ans-box-baseline">
+              <div>
+                <div class="ans-title" style="color: var(--cyan-neon)">
+                  <span>🟢 Baseline</span>
+                  <span class="ans-meta" style="color: var(--emerald-success)">F1: 1.0</span>
+                </div>
+                <div class="ans-body" id="ans-txt-baseline">...</div>
+              </div>
+              <div style="font-size:0.72rem; color:var(--text-muted)">Judge: Score 5/5 (Chính xác 100%)</div>
+            </div>
+
+            <!-- Corrupted Answer -->
+            <div class="answer-card" id="ans-box-corrupted">
+              <div>
+                <div class="ans-title" style="color: var(--coral-danger)">
+                  <span>🔴 Corrupted</span>
+                  <span class="ans-meta" id="ans-meta-corrupted" style="color: var(--coral-danger)">F1: 0.0</span>
+                </div>
+                <div class="ans-body" id="ans-txt-corrupted">...</div>
+              </div>
+              <div style="font-size:0.72rem; color:var(--coral-danger)" id="ans-judge-corrupted">Silent Failure</div>
+            </div>
+
+            <!-- Repaired Answer -->
+            <div class="answer-card" id="ans-box-repaired">
+              <div>
+                <div class="ans-title" style="color: var(--emerald-success)">
+                  <span>✨ Repaired</span>
+                  <span class="ans-meta" style="color: var(--emerald-success)">F1: 1.0</span>
+                </div>
+                <div class="ans-body" id="ans-txt-repaired">...</div>
+              </div>
+              <div style="font-size:0.72rem; color:var(--text-muted)">Judge: Score 5/5 (Phục hồi 100%)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom: Synthetic Corruption Suite Details -->
+      <div class="card corruption-section">
+        <div class="card-title">
+          <span>☣️</span> 6 Kịch Bản Tiêm Lỗi Dữ Liệu Thực Nghiệm (Synthetic Corruption Suite)
+        </div>
+        <div class="corruptions-grid">
+          <div class="corr-card">
+            <div class="corr-card-header">
+              <strong style="color:#fff;">1. Drop Latest Records</strong>
+              <span class="corr-tag">Mất 4 bài (20%)</span>
+            </div>
+            <p class="corr-desc">Bỏ rơi 20% các bài báo mới nhất, mô phỏng sự cố đứt gãy luồng ingestion.</p>
+            <div class="corr-affected">Tác động: Hit Rate sụt giảm trực tiếp từ 1.0 xuống 0.6000</div>
+          </div>
+
+          <div class="corr-card">
+            <div class="corr-card-header">
+              <strong style="color:#fff;">2. Blank Summary</strong>
+              <span class="corr-tag">2 bài rỗng</span>
+            </div>
+            <p class="corr-desc">Xóa trắng phần tóm tắt để phá hủy ngữ cảnh tóm tắt trong chuỗi embedding.</p>
+            <div class="corr-affected">Bắt lỗi: ExpectColumnValueLengthsToBeBetween FAIL (0 chars)</div>
+          </div>
+
+          <div class="corr-card">
+            <div class="corr-card-header">
+              <strong style="color:#fff;">3. Inject Noise Prefix</strong>
+              <span class="corr-tag">2 bài bị nhiễu</span>
+            </div>
+            <p class="corr-desc">Chèn chuỗi ký tự rác `### NOISE JUNK %$#@!` làm trôi dạt vector embedding.</p>
+            <div class="corr-affected">Tác động: Làm giảm khoảng cách Cosine Similarity khi truy vấn</div>
+          </div>
+
+          <div class="corr-card">
+            <div class="corr-card-header">
+              <strong style="color:#fff;">4. Truncate Title</strong>
+              <span class="corr-tag">2 bài cụt lủn</span>
+            </div>
+            <p class="corr-desc">Cắt ngắn tiêu đề bài báo xuống chữ `'Bad'` (< 8 ký tự), phá vỡ exact lookup.</p>
+            <div class="corr-affected">Tác động: Gây thất bại hoàn toàn tra cứu DOI/Title trực tiếp</div>
+          </div>
+
+          <div class="corr-card">
+            <div class="corr-card-header">
+              <strong style="color:#fff;">5. Stale Date Rewind</strong>
+              <span class="corr-tag">8 bài về năm 2020</span>
+            </div>
+            <p class="corr-desc">Lùi ngày xuất bản về 2020, đẩy tỷ lệ bài báo cũ lên 50% (> trần SLA 25%).</p>
+            <div class="corr-affected">Bắt lỗi: Freshness SLA báo CRITICAL FAIL (Stale ratio = 50.0%)</div>
+          </div>
+
+          <div class="corr-card">
+            <div class="corr-card-header">
+              <strong style="color:#fff;">6. Duplicate Rows</strong>
+              <span class="corr-tag">2 bản sao</span>
+            </div>
+            <p class="corr-desc">Nhân đôi bản ghi có cùng DOI `paper_id` để tạo ô nhiễm vector rác.</p>
+            <div class="corr-affected">Bắt lỗi: ExpectColumnValuesToBeUnique FAIL (4 duplicates)</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Self-Healing Modal -->
+  <div class="modal-overlay" id="healModal">
+    <div class="heal-modal">
+      <div class="heal-icon">⚡</div>
+      <h3 class="heal-title">Kích Hoạt Idempotent Self-Healing</h3>
+      <p style="font-size:0.85rem; color:var(--text-muted)">
+        Hệ thống phát hiện vi phạm Great Expectations & Freshness SLA. Đang tiến hành phục hồi tự động từ nguồn dữ liệu thô bất biến...
+      </p>
+
+      <div class="heal-steps">
+        <div class="heal-step-line" id="h-step-1"><span>⏳</span> 1. Cô lập và hủy bỏ collection lỗi `papers-corrupted`</div>
+        <div class="heal-step-line" id="h-step-2"><span>⏳</span> 2. Neo lại nguồn bất biến `data/raw/crossref_records.json`</div>
+        <div class="heal-step-line" id="h-step-3"><span>⏳</span> 3. Tái cấu trúc DataFrame sạch & định dạng 5 phần embedding</div>
+        <div class="heal-step-line" id="h-step-4"><span>⏳</span> 4. Chốt kiểm định GX 1.x & Freshness SLA xác nhận PASS</div>
+        <div class="heal-step-line" id="h-step-5"><span>⏳</span> 5. Khởi tạo ChromaDB collection mới `papers-repaired`</div>
+        <div class="heal-step-line" id="h-step-6"><span>⏳</span> 6. Re-evaluate Benchmark: Hit Rate phục hồi 100.0%!</div>
+      </div>
+
+      <button class="btn-close-modal" id="btnFinishHeal" onclick="finishHeal()">Đóng và Chuyển Trạng Thái</button>
+    </div>
+  </div>
+
+  <script>
+    // Embedded Data from Actual Pipeline Runs
+    const benchmarkQuestions = [
+      {
+        id: "q07",
+        type: "date",
+        label: "Q07 (Date)",
+        question: "When was 'Agentic Retrieval-Augmented Generation for Knowledge-Intensive Tasks' published?",
+        baseline: "2026-06-11",
+        corrupted: "2020-01-01 (Sai hoàn toàn do lỗi lùi ngày về 2020)",
+        repaired: "2026-06-11",
+        corruptedF1: "0.00",
+        corruptedJudge: "Score 1/5: AI trả lời sai năm 2020 (Silent Failure)"
+      },
+      {
+        id: "q01",
+        type: "summary",
+        label: "Q01 (Summary)",
+        question: "What is the main contribution of 'Data Observability and Quality Gates for Production RAG Systems'?",
+        baseline: "Silent data corruption in RAG pipelines degrades LLM answer faithfulness without throwing runtime errors.",
+        corrupted: "I don't know from the indexed corpus. (Tóm tắt bị xóa trắng rỗng)",
+        repaired: "Silent data corruption in RAG pipelines degrades LLM answer faithfulness without throwing runtime errors.",
+        corruptedF1: "0.00",
+        corruptedJudge: "Score 1/5: Tóm tắt rỗng khiến AI không tìm thấy tài liệu"
+      },
+      {
+        id: "q09",
+        type: "summary",
+        label: "Q09 (Summary)",
+        question: "What is the main contribution of 'Advanced Perspectives on Chunking Strategies for Technical Documentation Retrieval'?",
+        baseline: "An extended empirical study on ierarchical and semantic boundary chunking preserves code block contexts and markdown headings.",
+        corrupted: "Hierarchical and semantic boundary chunking preserves code block contexts and markdown headings.",
+        repaired: "An extended empirical study on ierarchical and semantic boundary chunking preserves code block contexts and markdown headings.",
+        corruptedF1: "0.74",
+        corruptedJudge: "Score 5/5: Tiêu đề bị cắt thành 'Bad', vector khớp yếu"
+      },
+      {
+        id: "q08",
+        type: "categories",
+        label: "Q08 (Categories)",
+        question: "What categories are assigned to 'Advanced Perspectives on Automated Data Quality Profiling with Great Expectations in CI/CD'?",
+        baseline: "Data Quality, DevOps",
+        corrupted: "Data Quality, DevOps (Nhiễm prefix ### NOISE JUNK %$#@!)",
+        repaired: "Data Quality, DevOps",
+        corruptedF1: "1.00",
+        corruptedJudge: "Score 5/5: Tìm thấy nhưng context chứa chuỗi nhiễu"
+      },
+      {
+        id: "q10",
+        type: "authors",
+        label: "Q10 (Authors)",
+        question: "Who authored 'Automated Data Quality Profiling with Great Expectations in CI/CD'?",
+        baseline: "Son Nguyen, Thuy Doan",
+        corrupted: "Son Nguyen, Thuy Doan",
+        repaired: "Son Nguyen, Thuy Doan",
+        corruptedF1: "1.00",
+        corruptedJudge: "Score 5/5: Khớp tác giả"
+      }
+    ];
+
+    let currentState = "baseline";
+    let activeQuestionIndex = 0;
+
+    // Initialize chips
+    function initChips() {
+      const container = document.getElementById("qa-chips-container");
+      container.innerHTML = "";
+      benchmarkQuestions.forEach((q, idx) => {
+        const chip = document.createElement("button");
+        chip.className = `qa-chip ${idx === activeQuestionIndex ? "active" : ""}`;
+        chip.textContent = q.label;
+        chip.onclick = () => selectQuestion(idx);
+        container.appendChild(chip);
+      });
+      renderQuestionDisplay();
+    }
+
+    function selectQuestion(idx) {
+      activeQuestionIndex = idx;
+      document.querySelectorAll(".qa-chip").forEach((chip, i) => {
+        chip.classList.toggle("active", i === idx);
+      });
+      renderQuestionDisplay();
+    }
+
+    function renderQuestionDisplay() {
+      const q = benchmarkQuestions[activeQuestionIndex];
+      document.getElementById("display-question").textContent = q.question;
+      document.getElementById("ans-txt-baseline").textContent = q.baseline;
+      document.getElementById("ans-txt-corrupted").textContent = q.corrupted;
+      document.getElementById("ans-txt-repaired").textContent = q.repaired;
+      document.getElementById("ans-meta-corrupted").textContent = `F1: ${q.corruptedF1}`;
+      document.getElementById("ans-judge-corrupted").textContent = q.corruptedJudge;
+
+      // Highlight active card
+      document.getElementById("ans-box-baseline").classList.toggle("state-active-box", currentState === "baseline");
+      document.getElementById("ans-box-corrupted").classList.toggle("state-active-box", currentState === "corrupted");
+      document.getElementById("ans-box-repaired").classList.toggle("state-active-box", currentState === "repaired");
+    }
+
+    // Set Dashboard State (baseline | corrupted | repaired)
+    function setState(state) {
+      currentState = state;
+      document.querySelectorAll(".state-btn").forEach(btn => {
+        btn.classList.remove("active");
+        if (btn.classList.contains(`state-${state}`)) btn.classList.add("active");
+      });
+
+      const isBase = state === "baseline";
+      const isCorr = state === "corrupted";
+      const isRep = state === "repaired";
+
+      // KPI Update
+      document.getElementById("val-hit-rate").textContent = isCorr ? "60.0%" : "100.0%";
+      document.getElementById("delta-hit-rate").textContent = isCorr ? "-40.0% Drop" : (isRep ? "+40.0% Restored" : "Max Recall");
+      document.getElementById("delta-hit-rate").className = `kpi-delta ${isCorr ? "bad" : "good"}`;
+      document.getElementById("sub-hit-rate").textContent = isCorr ? "4/10 câu hỏi thất bại do mất bài báo" : "10/10 truy xuất chính xác DOI đích";
+
+      document.getElementById("val-f1").textContent = isCorr ? "0.5741" : "1.0000";
+      document.getElementById("delta-f1").textContent = isCorr ? "-0.4259 Collapse" : (isRep ? "+0.4259 Recovered" : "Hoàn hảo");
+      document.getElementById("delta-f1").className = `kpi-delta ${isCorr ? "bad" : "good"}`;
+      document.getElementById("sub-f1").textContent = isCorr ? "Từ khóa bị biến dạng / mất tóm tắt" : "Trùng khớp từ khóa tuyệt đối";
+
+      document.getElementById("val-judge").textContent = isCorr ? "60.0%" : "100.0%";
+      document.getElementById("delta-judge").textContent = isCorr ? "Score: 3.4/5.0" : "Score: 5.0/5.0";
+      document.getElementById("delta-judge").className = `kpi-delta ${isCorr ? "bad" : "good"}`;
+      document.getElementById("sub-judge").textContent = isCorr ? "Phát sinh ảo giác và trả lời sai" : "10/10 câu trả lời đúng bản chất";
+
+      document.getElementById("val-quality").textContent = isCorr ? "FAIL" : "PASS";
+      document.getElementById("val-quality").style.color = isCorr ? "var(--coral-danger)" : "var(--emerald-success)";
+      document.getElementById("delta-quality").textContent = isCorr ? "2 Checks Violated" : "4/4 Passed";
+      document.getElementById("delta-quality").className = `kpi-delta ${isCorr ? "bad" : "good"}`;
+      document.getElementById("sub-quality").textContent = isCorr ? "Phát hiện duplicate ID & blank summary" : "Zero Schema & Completeness Drifts";
+
+      document.getElementById("val-freshness").textContent = isCorr ? "50.00%" : "4.17%";
+      document.getElementById("val-freshness").style.color = isCorr ? "var(--coral-danger)" : "var(--emerald-success)";
+      document.getElementById("delta-freshness").textContent = isCorr ? "VIOLATION (> 25%)" : "SLA: ≤ 25%";
+      document.getElementById("delta-freshness").className = `kpi-delta ${isCorr ? "bad" : "good"}`;
+      document.getElementById("sub-freshness").textContent = isCorr ? "11/22 bài bị lùi ngày quá 180 ngày" : "1 bài quá hạn / 24 tổng số bài";
+
+      // Pipeline Gate update
+      document.getElementById("pipe-gate-badge").textContent = isCorr ? "CRITICAL FAIL" : "PASS";
+      document.getElementById("pipe-gate-badge").className = `pipe-status ${isCorr ? "badge-fail" : "badge-pass"}`;
+      document.getElementById("step-gate").className = `pipe-step ${isCorr ? "fail" : "pass"}`;
+
+      document.getElementById("pipe-index-badge").textContent = isBase ? "papers-baseline" : (isCorr ? "papers-corrupted" : "papers-repaired");
+      document.getElementById("pipe-eval-badge").textContent = isCorr ? "Hit Rate 0.6" : "Hit Rate 1.0";
+      document.getElementById("pipe-eval-badge").className = `pipe-status ${isCorr ? "badge-fail" : "badge-pass"}`;
+      document.getElementById("step-eval").className = `pipe-step ${isCorr ? "fail" : "pass"}`;
+
+      // GX Table update
+      document.getElementById("val-row-count").textContent = isCorr ? "22 dòng" : "24 dòng";
+      document.getElementById("val-unique").textContent = isCorr ? "4 trùng lặp (18.18%)" : "0 trùng";
+      document.getElementById("badge-unique").textContent = isCorr ? "FAIL" : "PASS";
+      document.getElementById("badge-unique").className = `gx-badge ${isCorr ? "badge-fail" : "badge-pass"}`;
+
+      document.getElementById("val-length").textContent = isCorr ? "4 rỗng (18.18%)" : "0 rỗng";
+      document.getElementById("badge-length").textContent = isCorr ? "FAIL" : "PASS";
+      document.getElementById("badge-length").className = `gx-badge ${isCorr ? "badge-fail" : "badge-pass"}`;
+
+      // Freshness Meter update
+      const freshRatio = isCorr ? "50.00%" : "4.17%";
+      document.getElementById("fresh-percent-txt").textContent = `${freshRatio} Stale`;
+      document.getElementById("fresh-percent-txt").style.color = isCorr ? "var(--coral-danger)" : "var(--emerald-success)";
+      document.getElementById("fresh-fill").style.width = isCorr ? "50%" : "4.17%";
+      document.getElementById("fresh-fill").style.background = isCorr ? "var(--coral-danger)" : "var(--emerald-success)";
+      document.getElementById("fresh-explanation").textContent = isCorr
+        ? "11/22 bài báo bị lùi ngày quá hạn (50%). ĐÃ VƯỢT TRẦN SLA 25% → CHẶN NGAY TẠI CỔNG OBSERVABILITY!"
+        : "Chỉ 1/24 bài báo cũ quá 180 ngày (4.17%). Nằm an toàn dưới trần vi phạm SLA 25%.";
+
+      renderQuestionDisplay();
+    }
+
+    // Modal Simulation for Self-Healing
+    function openHealModal() {
+      const modal = document.getElementById("healModal");
+      modal.classList.add("open");
+
+      // Reset steps
+      for (let i = 1; i <= 6; i++) {
+        const el = document.getElementById(`h-step-${i}`);
+        el.className = "heal-step-line";
+        el.innerHTML = `<span>⏳</span> ${el.textContent.slice(2)}`;
+      }
+
+      // Run sequential animation
+      const steps = [
+        "1. Đã cô lập và hủy bỏ collection lỗi `papers-corrupted`",
+        "2. Đã neo lại snapshot bất biến `data/raw/crossref_records.json`",
+        "3. Tái cấu trúc DataFrame sạch & định dạng 5 phần embedding",
+        "4. Chốt kiểm định GX 1.x & Freshness SLA xác nhận PASS",
+        "5. Đã khởi tạo ChromaDB collection mới `papers-repaired`",
+        "6. Re-evaluate Benchmark: Hit Rate phục hồi 100.0%!"
+      ];
+
+      steps.forEach((text, i) => {
+        setTimeout(() => {
+          const el = document.getElementById(`h-step-${i+1}`);
+          el.className = "heal-step-line done";
+          el.innerHTML = `<span>✅</span> ${text}`;
+        }, (i + 1) * 600);
+      });
+    }
+
+    function finishHeal() {
+      document.getElementById("healModal").classList.remove("open");
+      setState("repaired");
+    }
+
+    // Initialize on load
+    window.addEventListener("DOMContentLoaded", () => {
+      initChips();
+      setState("baseline");
+    });
+  </script>
+</body>
+</html>
